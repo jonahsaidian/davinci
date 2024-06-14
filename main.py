@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pedalboard.io import AudioFile
 from scipy.fft import fft
+from scipy.interpolate import RegularGridInterpolator
 
 # %%
 fp = os.path.join(os.path.abspath("."), "HappyBirthday.mp3")
@@ -112,22 +113,46 @@ best_freqs = np.array(best_freqs)[amps > 0]
 amps = amps[amps > 0]
 n_freqs = len(best_freqs)
 side = int(np.ceil(np.sqrt(n_freqs)))
-best_res = (side, side)
 # %%
-data = np.ones(best_res) * np.nan
-c_dict = {}
-index = 0
-for row in range(0, data.shape[0]):
-    for col in range(0, data.shape[1]):
+xx = np.linspace(0, side**2, side)
+yy = np.linspace(0, side**2, side)
+data_ = np.ones((len(xx), len(yy)))
+data_r = np.ones((len(xx), len(yy)))
+data_g = np.ones((len(xx), len(yy)))
+data_b = np.ones((len(xx), len(yy)))
+data_a = np.ones((len(xx), len(yy)))
+
+for row in range(0, data_.shape[0]):
+    for col in range(0, data_.shape[1]):
         index = (row * side) + (col)
         if index < n_freqs - 1:
             f = best_freqs[index]
             amp_scale = amps[index]
             color = sound_to_color(f, amp_scale)
-            if not color in c_dict.keys():
-                n = len(c_dict)
-                c_dict[color] = n
-            data[row][col] = c_dict[color]
+            data_r[row][col] = color[0]
+            data_g[row][col] = color[1]
+            data_b[row][col] = color[2]
+            data_a[row][col] = color[3]
+
+interp_r = RegularGridInterpolator((xx, yy), data_r)
+interp_g = RegularGridInterpolator((xx, yy), data_g)
+interp_b = RegularGridInterpolator((xx, yy), data_b)
+interp_a = RegularGridInterpolator((xx, yy), data_a)
+# %%
+data = np.ones((side**2, side**2)) * np.nan
+c_dict = {}
+index = 0
+for row in range(0, data.shape[0]):
+    for col in range(0, data.shape[1]):
+        r = interp_r([row, col])[0]
+        g = interp_g([row, col])[0]
+        b = interp_b([row, col])[0]
+        a = interp_a([row, col])[0]
+        color = (r, g, b, a)
+        if not color in c_dict.keys():
+            n = len(c_dict)
+            c_dict[color] = n
+        data[row][col] = c_dict[color]
 # %%
 # make a figure + axes
 fig, ax = plt.subplots(1, 1, tight_layout=True)
