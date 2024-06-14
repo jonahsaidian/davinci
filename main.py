@@ -9,16 +9,18 @@ from scipy.fft import fft
 from scipy.interpolate import RegularGridInterpolator
 
 # %%
-fp = os.path.join(os.path.abspath("."), "HappyBirthday.mp3")
+fp = os.path.join(os.path.abspath("."), "Mozart.mp3")
 with AudioFile(fp) as af:
     sample_rate = af.samplerate
     song_length = af.frames
-    song = af.read(2717568)
+    song = af.read(song_length)
     channels = af.num_channels
     # chunk = af.read(af.samplerate)
 song_flat = np.sum(song, 0) / channels
+scale_factor = max(1, round(240 * sample_rate / song_length))
+interp_factor = 5 + round(600 * sample_rate / song_length)
 # %%
-window = sample_rate // 3
+window = sample_rate // scale_factor
 best_freqs = []
 amps = []
 for i in range(song_length // window):
@@ -100,7 +102,7 @@ def note_to_color(f):
 
 def sound_to_color(f, amp_scale):
     color = note_to_color(f)
-    new_color = color[:3] + (amp_scale,)
+    new_color = color[:3] + (0.5 + amp_scale / 2,)
     return new_color
 
 
@@ -114,8 +116,8 @@ amps = amps[amps > 0]
 n_freqs = len(best_freqs)
 side = int(np.ceil(np.sqrt(n_freqs)))
 # %%
-xx = np.linspace(0, side**2, side)
-yy = np.linspace(0, side**2, side)
+xx = np.linspace(0, side * interp_factor, side)
+yy = np.linspace(0, side * interp_factor, side)
 data_ = np.ones((len(xx), len(yy)))
 data_r = np.ones((len(xx), len(yy)))
 data_g = np.ones((len(xx), len(yy)))
@@ -134,12 +136,12 @@ for row in range(0, data_.shape[0]):
             data_b[row][col] = color[2]
             data_a[row][col] = color[3]
 
-interp_r = RegularGridInterpolator((xx, yy), data_r)
-interp_g = RegularGridInterpolator((xx, yy), data_g)
-interp_b = RegularGridInterpolator((xx, yy), data_b)
-interp_a = RegularGridInterpolator((xx, yy), data_a)
+interp_a = RegularGridInterpolator((xx, yy), data_a, "slinear")
+interp_r = RegularGridInterpolator((xx, yy), data_r, "slinear")
+interp_g = RegularGridInterpolator((xx, yy), data_g, "slinear")
+interp_b = RegularGridInterpolator((xx, yy), data_b, "slinear")
 # %%
-data = np.ones((side**2, side**2)) * np.nan
+data = np.ones((side * interp_factor, side * interp_factor)) * np.nan
 c_dict = {}
 index = 0
 for row in range(0, data.shape[0]):
