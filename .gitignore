@@ -1,2 +1,7 @@
 venv/
 *.mp3
+
+# pyinstaller
+build
+dist
+main.spec
